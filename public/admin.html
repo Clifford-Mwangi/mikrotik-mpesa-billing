@@ -1,0 +1,144 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Admin Dashboard — Mikrotik Billing</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    body { font-family: Inter, system-ui, sans-serif; padding: 20px; max-width:1200px; margin:auto; }
+    h1 { font-size: 22px; margin-bottom: 10px; }
+    .row { display:flex; gap:12px; margin-bottom:12px; }
+    .card { padding:12px; border-radius:8px; box-shadow:0 1px 6px rgba(0,0,0,0.06); background:#fff; flex:1; }
+    table { width: 100%; border-collapse: collapse; margin-top:12px; }
+    th, td { padding:8px 10px; border-bottom:1px solid #eee; text-align:left; font-size:13px; }
+    button { padding:8px 12px; border-radius:6px; cursor:pointer; }
+    input.token { width: 420px; padding:8px; border-radius:6px; border:1px solid #ddd; }
+    .small { font-size:12px; color:#666; }
+    a.download { color:#0b5cff; text-decoration:none; }
+  </style>
+</head>
+<body>
+  <h1>Admin Dashboard — Mikrotik Billing</h1>
+
+  <div style="margin-bottom:8px;">
+    <label class="small">Admin token (paste the value from .env):</label><br/>
+    <input id="adminToken" class="token" placeholder="x-admin-token value" />
+    <button onclick="refreshAll()">Refresh</button>
+  </div>
+
+  <div class="row">
+    <div class="card" id="card-stats">
+      <strong>Stats</strong>
+      <div id="stats"></div>
+    </div>
+    <div class="card">
+      <strong>Quick actions</strong>
+      <div style="margin-top:8px;">
+        <button onclick="fetchPayments()">Load Payments</button>
+        <button onclick="fetchInvoices()">Load Invoices</button>
+        <button onclick="fetchUsers()">Load Users</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="content"></div>
+
+<script>
+const apiPrefix = "/api/admin";
+
+function getToken() {
+  return document.getElementById("adminToken").value.trim();
+}
+
+async function apiGet(path) {
+  const token = getToken();
+  const headers = {};
+  if (token) headers["x-admin-token"] = token;
+  const res = await fetch(path, { headers });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(res.status + " " + text);
+  }
+  return res.json();
+}
+
+async function refreshAll() {
+  try {
+    const s = await apiGet(apiPrefix + "/stats");
+    document.getElementById("stats").innerHTML = `
+      <div>Total users: ${s.totalUsers}</div>
+      <div>Total payments: ${s.totalPayments}</div>
+      <div>Total invoices: ${s.totalInvoices}</div>
+      <div>Revenue: KES ${s.revenue}</div>
+    `;
+    fetchPayments();
+  } catch (err) {
+    alert("Error: " + err.message);
+  }
+}
+
+async function fetchUsers() {
+  try {
+    const users = await apiGet(apiPrefix + "/users");
+    showTable(users, ["_id","name","email","phone","activePlan","planActivatedAt"], "Users");
+  } catch (err) {
+    alert("Error: " + err.message);
+  }
+}
+
+async function fetchPayments() {
+  try {
+    const payments = await apiGet(apiPrefix + "/payments");
+    showTable(payments, ["_id","user","plan","amount","status","transactionId","createdAt"], "Payments");
+  } catch (err) {
+    alert("Error: " + err.message);
+  }
+}
+
+async function fetchInvoices() {
+  try {
+    const invoices = await apiGet(apiPrefix + "/invoices");
+    // render invoices with download link
+    const rows = invoices.map(inv => ({
+      _id: inv._id,
+      user: inv.user ? inv.user.email || inv.user.name : "",
+      plan: inv.plan?.name || "",
+      amount: inv.amount,
+      status: inv.status,
+      issuedAt: inv.issuedAt,
+      download: `<a class="download" href="/api/admin/invoices/download/${inv._id}?adminToken=${getToken()}" target="_blank">Download</a>`
+    }));
+    showTable(rows, ["_id","user","plan","amount","status","issuedAt","download"], "Invoices");
+  } catch (err) {
+    alert("Error: " + err.message);
+  }
+}
+
+function showTable(items, columns, title) {
+  const content = document.getElementById("content");
+  if (!items || items.length === 0) {
+    content.innerHTML = `<h2>${title}</h2><div class="small">No data</div>`;
+    return;
+  }
+
+  let html = `<h2>${title}</h2><table><thead><tr>`;
+  columns.forEach(c => html += `<th>${c}</th>`);
+  html += `</tr></thead><tbody>`;
+  items.forEach(it => {
+    html += "<tr>";
+    columns.forEach(c => {
+      let v = it[c];
+      if (typeof v === "object" && v !== null) v = JSON.stringify(v);
+      if (v === undefined) v = "";
+      html += `<td>${v}</td>`;
+    });
+    html += "</tr>";
+  });
+  html += "</tbody></table>";
+  content.innerHTML = html;
+}
+
+// auto-fill token from prompt? no - paste manually for safety
+</script>
+</body>
+</html>

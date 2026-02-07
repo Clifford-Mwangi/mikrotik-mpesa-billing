@@ -1,0 +1,83 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Buy Internet</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      body {
+        background: #0f172a;
+        color: white;
+        font-family: Arial;
+        padding: 20px;
+        text-align: center;
+      }
+      .plan {
+        background: #1e293b;
+        padding: 15px;
+        margin: 10px;
+        border-radius: 8px;
+      }
+      button {
+        background: #22c55e;
+        border: none;
+        padding: 10px;
+        width: 100%;
+        border-radius: 6px;
+      }
+      input {
+        padding: 10px;
+        width: 100%;
+        margin: 5px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>Choose Your Plan</h2>
+    <div id="plans">Loading...</div>
+
+    <script>
+      const API = "http://192.168.1.4:5000";
+
+      async function loadPlans() {
+        try {
+          const r = await fetch(API + "/api/plans");
+          const plans = await r.json();
+          const div = document.getElementById("plans");
+          div.innerHTML = "";
+
+          plans.forEach((p) => {
+            div.innerHTML += `
+        <div class="plan">
+          <h3>${p.name}</h3>
+          <p>KES ${p.price}</p>
+          <input id="ph-${p._id}" placeholder="07xxxxxxxx">
+          <button onclick="pay('${p._id}', '${p.name}', ${p.price})">Pay with M-PESA</button>
+        </div>`;
+          });
+        } catch (e) {
+          document.getElementById("plans").innerHTML = "❌ Cannot load plans";
+        }
+      }
+
+      async function pay(id, name, price) {
+        const phone = document.getElementById("ph-" + id).value;
+        await fetch(API + "/api/payments/pay", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            phone,
+            planId: id,
+            planName: name,
+            amount: price,
+          }),
+        });
+        alert("STK sent");
+      }
+
+      loadPlans();
+    </script>
+  </body>
+</html>
+
+
+

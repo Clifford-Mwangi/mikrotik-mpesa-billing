@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Dashboard</title>
+</head>
+<body>
+  <h2>My Invoices</h2>
+
+  <button onclick="logout()">Logout</button>
+  <br><br>
+  <a href="/buy.html">Buy / Renew Plan</a>
+
+  <ul id="invoiceList"></ul>
+
+  <script>
+    async function loadInvoices() {
+      const token = localStorage.getItem("token");
+
+      const res = await fetch("/api/invoices/my", {
+        headers: {
+          Authorization: "Bearer " + token
+        }
+      });
+
+      const invoices = await res.json();
+      const list = document.getElementById("invoiceList");
+      list.innerHTML = "";
+
+      invoices.forEach(inv => {
+        const li = document.createElement("li");
+        li.innerHTML = `
+          ${inv.plan?.name || "Plan"} - KES ${inv.amount}
+          <a href="/api/invoices/download/${inv._id}" target="_blank">
+            Download PDF
+          </a>
+        `;
+        list.appendChild(li);
+      });
+    }
+
+    function logout() {
+      localStorage.removeItem("token");
+      window.location.href = "/login.html";
+    }
+
+    loadInvoices();
+  </script>
+</body>
+</html>
