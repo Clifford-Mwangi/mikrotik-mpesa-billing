@@ -110,6 +110,7 @@ Database modeling
 Router-based authentication
 Network troubleshooting (DHCP, NAT, routing)
 Production-style debugging
+
 👨‍💻 Author
 Clifford Mwangi
-Full-Stack Developer & Systems Engineer
+Junior Full-Stack Developer & Systems Engineer
